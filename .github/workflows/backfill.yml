@@ -1,0 +1,141 @@
+name: Arsiv Yenileme
+
+on:
+  schedule:
+    - cron: "0 * * * *" # saatte bir; govdesi veya editorNote eksik haberleri yeniler
+  workflow_dispatch: {} # elle calistirma
+
+# Ayrı kilit grubu: pipeline (her 5 dk) ile çakışmasın; ikisi aynı anda
+# git'e yazmaya çalışırsa arşiv işi bir sonraki saatte yeniden dener.
+concurrency:
+  group: arsiv-yenileme
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Bu depoda kod yok: private "haberai" deposu deploy key ile cekilir.
+      - uses: actions/checkout@v7
+        with:
+          repository: fruyorsan/haberai
+          ssh-key: ${{ secrets.HABERAI_DEPLOY_KEY }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
+            site/package-lock.json
+
+      - name: Hattin bagimliliklarini kur
+        run: npm ci
+
+      - name: Eski haberleri yeni bicimle yenile
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          BACKFILL_LIMIT: "0"
+        run: npm run backfill
+
+      # Arşivde kaynak sitelerden alınmış görselleri telif güvenli hâle
+      # getirir: Wikimedia Commons (CC0/kamu malı/CC BY/CC BY-SA) veya
+      # kategori yedeği. Tur başına 400 haber; ilk çalıştırmalarda arşiv
+      # temizlenir, sonra adım anında biter.
+      # `--delay=400` Commons'ın 429 hız sınırına takılmamak için; ilerleme
+      # 50 haberde bir diske yazılır (uzun tur yarıda kalsa da kaybolmaz).
+      - name: Telif guvenli gorsellere gecir
+        continue-on-error: true
+        run: node scripts/gorsel-guvenli.mjs --limit=400 --concurrency=3 --delay=400 --save-every=50
+
+      # İndeks çekirdeğindeki eski haberlerin eksik `gorselSorgu` alanını
+      # doldurur. AI'dan yalnızca kısa bir İngilizce sorgu istenir (tam makale
+      # üretilmez). Saatte 12 haber: 48 eksik ~4 saatte tamamlanır, sonra adım
+      # hiçbir şey yapmaz. Sorgu eklenen haberler aşağıdaki turda fotoğraf alır.
+      - name: Eksik gorsel sorgularini doldur
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          SORGU_LIMIT: "12"
+          SORGU_GUN: "45"
+        run: npm run gorsel-sorgu
+
+      # Fotoğrafsız haberlere ücretsiz Wikimedia arşivinden gövde içi fotoğraf
+      # ekler (haberin kendi görsel sorgusu + başlık/etiket uygunluk denetimi).
+      # Ağ hatası arşiv yenilemeyi ve yayını durdurmasın.
+      - name: Govde ici fotograflari doldur
+        continue-on-error: true
+        env:
+          EK_GORSEL_LIMIT: "40"
+          EK_GORSEL_GUN: "90"
+          EK_GORSEL_TEKRAR_GUN: "30"
+        run: npm run ek-gorsel
+
+      # Arşivdeki eski fotoğraflar yukarıdaki adımda telif güvenli hâle
+      # getiriliyor. Ayrı bir görsel adımı yok.
+
+      - name: Degisiklikleri kaydet
+        id: commit
+        run: |
+          git config user.name "haber-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/
+          if git diff --staged --quiet; then
+            echo "Yenilenecek haber yok."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "chore: arsiv yenileme ($(date -u +%Y-%m-%dT%H:%MZ))"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+          git fetch origin main
+          git merge --no-edit -X ours origin/main
+          git push
+
+      - name: Site bagimliliklarini kur
+        if: steps.commit.outputs.changed == 'true'
+        run: cd site && npm ci
+
+      # Ozel alan adi yalnizca CUSTOM_DOMAIN degiskeni tanimliysa yazilir
+      # (bkz. pipeline.yml aciklamasi).
+      - name: Ozel alan adi (hazirsa CNAME yaz)
+        if: steps.commit.outputs.changed == 'true' && vars.CUSTOM_DOMAIN != ''
+        env:
+          CUSTOM_DOMAIN: ${{ vars.CUSTOM_DOMAIN }}
+        run: printf '%s\n' "$CUSTOM_DOMAIN" > site/public/CNAME
+
+      - name: Siteyi derle
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
+          ADSENSE_SLOT_MAKALE: ${{ vars.ADSENSE_SLOT_MAKALE }}
+          ADSENSE_SLOT_MAKALE2: ${{ vars.ADSENSE_SLOT_MAKALE2 }}
+          ADSENSE_SLOT_LISTE: ${{ vars.ADSENSE_SLOT_LISTE }}
+          # Bildirim zili (bkz. pipeline.yml): bos ise zil hic basilmaz.
+          ONESIGNAL_APP_ID: ${{ vars.ONESIGNAL_APP_ID }}
+          # Yorumlar ve sosyal kanallar (bkz. pipeline.yml): bosken ilgili
+          # arayuz sessizce gizlenir, kirik baglanti olmaz.
+          YORUM_URL: ${{ vars.YORUM_URL }}
+          YORUM_ANON: ${{ vars.YORUM_ANON }}
+          TELEGRAM_URL: ${{ vars.TELEGRAM_URL }}
+          X_URL: ${{ vars.X_URL }}
+          BLUESKY_URL: ${{ vars.BLUESKY_URL }}
+        run: cd site && npm run build
+
+      # YAYIN: Cloudflare Pages (tek hedef). GitHub Pages kopyasi kaldirildi.
+      - name: Cloudflare Pages'e yayinla
+        if: steps.commit.outputs.changed == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_PAGES_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy site/dist
+            --project-name=${{ vars.CLOUDFLARE_PROJECT || 'haberai' }}
+            --branch=main
+            --commit-dirty=true
