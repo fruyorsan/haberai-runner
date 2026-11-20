@@ -214,6 +214,20 @@ jobs:
           AI_KAPAK_LIMIT: "0"
         run: node scripts/kapak-uret.mjs --uygunsuz --limit=100 --paralel=8
 
+      # TEKRAR EDEN KARE ONARIMI (20.11.2026).
+      # Ayni stok kare onlarca habere kapak olabiliyordu: 27 haberde ayni
+      # Samsung makinesi, 26 haberde "elinde dunya kuresi", 25 haberde ayni
+      # Karakoy otoparki. Kare teknik olarak uygundu ama habere ozgu degildi.
+      # Bu tur, kapagi 3+ haberde tekrar eden kayitlari hedefler: once
+      # yayincinin kendi fotografini (kaynak seridiyle) dener, olmazsa habere
+      # ozgu tasarim kartina cevirir. Tur basina 40 haber; arsiv birkac saatte
+      # temizlenir ve ayni kare yeni haberlere bir daha atanmaz.
+      - name: Tekrar eden kapak karelerini onar
+        continue-on-error: true
+        env:
+          AI_KAPAK_LIMIT: "0"
+        run: node scripts/kapak-uret.mjs --tekrar --limit=40 --paralel=6
+
       # KAYNAK FOTOGRAFI: tasarim karti kalmis haberleri yayincinin KENDI
       # og:image / twitter:image karesiyle degistirir. 2026-11 oncesi bu yol
       # tamamen kapatildigi icin arsivin %76'si karta dusmustu. Kalite kapisi
