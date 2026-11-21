@@ -319,7 +319,11 @@ jobs:
           # Eski "-X ours" davranisi elle eklenen fotograflari siliyordu.
           git config merge.haber-veri.name "haber verisi birlestirme"
           git config merge.haber-veri.driver "node scripts/veri-birlestir-surucu.mjs %O %A %B"
-          git add data/ site/public/kapak/
+          # `reports/` de eklenir: kapak-uret.mjs buraya durum dosyasi yaziyor
+          # (reports/kapak-parti-durum.json) ve dosya takipli oldugu icin,
+          # stage edilmezse bir sonraki `git merge` "local changes would be
+          # overwritten" hatasiyla dusuyordu (21.11.2026 kosusu 44885878661).
+          git add data/ reports/ site/public/kapak/
           if git diff --staged --quiet; then
             echo "Yeni veri yok."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -328,7 +332,10 @@ jobs:
           git commit -m "chore: veri guncellemesi ($(date -u +%Y-%m-%dT%H:%MZ))"
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-          # Uzak ilerlemisse cakismasiz birlestir; taze verimiz kazanir
+          # Uzak ilerlemisse cakismasiz birlestir; taze verimiz kazanir.
+          # Kalan takipli degisiklikler merge'u bloke etmesin diye temizlenir
+          # (commit edilmis olanlar korunur).
+          git checkout -- . 2>/dev/null || true
           git fetch origin main
           git merge --no-edit -X ours origin/main
           for i in 1 2 3 4; do git fetch origin main && git merge --no-edit -X ours origin/main && git push && break; sleep 3; done
