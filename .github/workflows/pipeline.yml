@@ -179,7 +179,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           AI_KAPAK_LIMIT: "0"
-        run: node scripts/kapak-uret.mjs --havuz --limit=120 --paralel=8
+        run: node scripts/kapak-uret.mjs --havuz --limit=120 --paralel=8 --gun=14
 
       # GUVENLIK AGI: kapak adimi bir haberi atlarsa `image` alani Wikimedia
       # stogunda kalabiliyor (baslikla ilgisiz kare). En yeni stok gorselli
@@ -212,7 +212,7 @@ jobs:
         continue-on-error: true
         env:
           AI_KAPAK_LIMIT: "0"
-        run: node scripts/kapak-uret.mjs --uygunsuz --limit=100 --paralel=8
+        run: node scripts/kapak-uret.mjs --uygunsuz --limit=100 --paralel=8 --gun=14
 
       # TEKRAR EDEN KARE ONARIMI (20.11.2026).
       # Ayni stok kare onlarca habere kapak olabiliyordu: 27 haberde ayni
@@ -226,7 +226,7 @@ jobs:
         continue-on-error: true
         env:
           AI_KAPAK_LIMIT: "0"
-        run: node scripts/kapak-uret.mjs --tekrar --limit=40 --paralel=6
+        run: node scripts/kapak-uret.mjs --tekrar --limit=40 --paralel=6 --gun=14
 
       # KAYNAK FOTOGRAFI: tasarim karti kalmis haberleri yayincinin KENDI
       # og:image / twitter:image karesiyle degistirir. 2026-11 oncesi bu yol
