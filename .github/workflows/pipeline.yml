@@ -238,7 +238,7 @@ jobs:
         continue-on-error: true
         env:
           AI_KAPAK_LIMIT: "0"
-        run: node scripts/kapak-uret.mjs --kaynaktan --limit=60 --paralel=6 --eski
+        run: node scripts/kapak-uret.mjs --kaynaktan --limit=60 --paralel=6 --eski --gun=60
 
       # OPENVERSE URUN FOTOGRAFI: marka/urun/ozel ad KANITLI haberlerde (Samsung,
       # Togg, Galatasaray...) gercek kareyi CC0 havuzundan ceker. Kural: adayin
