@@ -60,9 +60,15 @@ jobs:
       #    kopyalar. Bu depo bilincli olarak public: GitHub Actions dakikalari
       #    public depolarda sinirsiz, private depoda aylik 2.000 dk ile sinirli.
       #    Hattin tamami (17-22 dk/tur, ~1.200 dk/gun) private kotasina SIGMAZ.
+      # ZINCIR SABLONU: HER ZAMAN `main`DEN kopyalanir.
+      # NEDEN: tetik kosusu bu adimi tetik dalindan calistirir; yalnizca
+      # `path: runner-kopya` verilince kopya da TETIK dalindan geliyordu.
+      # Boylece zincir kendi eski is akisi dosyasini tasiyip duruyor, main'e
+      # gonderilen duzeltmeler (or. --gun=14) chained kosulara hic ulasmiyordu.
       - uses: actions/checkout@v7
         with:
           path: runner-kopya
+          ref: main
 
       - uses: actions/setup-node@v7
         with:
