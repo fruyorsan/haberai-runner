@@ -220,6 +220,34 @@ jobs:
           AI_KAPAK_LIMIT: "0"
         run: node scripts/kapak-uret.mjs --uygunsuz --limit=100 --paralel=8 --gun=14
 
+      # KAPAK-HABER ALAKA DENETIMI (22.11.2026) — kanitsiz fotograf vision'a sorar.
+      #
+      # SORUN: yukaridaki tur yalnizca DOSYA ADINA bakiyor ("dosya adinda haberin
+      # ozel adi geciyor mu"). Canlida olculen uc kapak bu kapiyi gecti:
+      #   "Windows'a yeni rakip: Impossible OS"     -> eski Windows 7 masaustu
+      #   "Oruc Reis Pakistan aciklarinda sismik"   -> JAPON arastirma gemisi Kairei
+      #   "Finlandiya, Ukrayna'nin kargosunu vurdu" -> rastgele bir yuk gemisi
+      # Ucu de `kaynakTur` degeri ek/veri/stok olan karelerdi: yayincinin kendi
+      # gorseli DEGIL, yalnizca piksel kalitesine (parlaklik/keskinlik) bakilarak
+      # secilmislerdi. "Bu kare bu haberi anlatiyor mu?" hic sorulmuyordu.
+      #
+      # NE YAPAR: her kare vision'a gider; "uygun:true" + alaka>=55 gelmezse kapak
+      # tasarim kartina cevrilir. Vision saglayicisi yoksa/kota bittiyse kapak
+      # DEGISMEZ (sonraki turda yeniden denenir) — kota doldugu an arsivin karta
+      # donmesini engeller. Yayincinin kendi og:image'i (kaynakTur=kaynak), ajan
+      # secimi ve elle konan gorsel muaftir.
+      - name: Kapak-haber alaka denetimi
+        continue-on-error: true
+        env:
+          AI_KAPAK_LIMIT: "0"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          OPENVERSE_VISION_LIMIT: "90"
+        run: node scripts/kapak-uret.mjs --alaka --limit=90 --paralel=4 --gun=14
+
       # TEKRAR EDEN KARE ONARIMI (20.11.2026).
       # Ayni stok kare onlarca habere kapak olabiliyordu: 27 haberde ayni
       # Samsung makinesi, 26 haberde "elinde dunya kuresi", 25 haberde ayni
