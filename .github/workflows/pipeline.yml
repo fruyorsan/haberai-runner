@@ -231,11 +231,16 @@ jobs:
       # gorseli DEGIL, yalnizca piksel kalitesine (parlaklik/keskinlik) bakilarak
       # secilmislerdi. "Bu kare bu haberi anlatiyor mu?" hic sorulmuyordu.
       #
-      # NE YAPAR: her kare vision'a gider; "uygun:true" + alaka>=55 gelmezse kapak
-      # tasarim kartina cevrilir. Vision saglayicisi yoksa/kota bittiyse kapak
-      # DEGISMEZ (sonraki turda yeniden denenir) — kota doldugu an arsivin karta
-      # donmesini engeller. Yayincinin kendi og:image'i (kaynakTur=kaynak), ajan
-      # secimi ve elle konan gorsel muaftir.
+      # NE YAPAR: her kare vision'a gider; alaka esigi karsilanmazsa kapak
+      # tasarim kartina cevrilir (kaynak 40, ajan 50, digerleri 55). Vision
+      # saglayicisi yoksa/kota bittiyse kapak DEGISMEZ (sonraki turda yeniden
+      # denenir) — kota doldugu an arsivin karta donmesini engeller.
+      #
+      # 23.11.2026: ajan kapaklari artik MUAF DEGIL. Ajan "Impossible OS"
+      # haberine Dell sinif bilgisayarini skor 43 ile koymus, kendi gerekcesine
+      # "spesifik Impossible OS'u yansitmiyor" yazmisti; `ajan` muaf oldugu icin
+      # hicbir tur dokunamiyordu. Artik onayli kareler `kapak.alakaOnay` ile
+      # hatirlanir, onaysizlar bu turda denetlenir.
       - name: Kapak-haber alaka denetimi
         continue-on-error: true
         env:
