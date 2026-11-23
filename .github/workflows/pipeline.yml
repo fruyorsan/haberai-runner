@@ -251,6 +251,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           OPENVERSE_VISION_LIMIT: "90"
+          # Gunluk vision butcesi (bkz. src/gorsel-ajan.js): Gemini ucretsiz
+          # katmani model+proje basina gunde 20 istek veriyor. Butce olmadan
+          # ilk tur gunun tamamini yakiyor, sonraki 15 saat vision olmuyordu.
+          VISION_GUNLUK_LIMIT: "60"
+          VISION_ALAKA_GUNLUK_LIMIT: "24"
         run: node scripts/kapak-uret.mjs --alaka --limit=90 --paralel=4 --gun=14
 
       # TEKRAR EDEN KARE ONARIMI (20.11.2026).
