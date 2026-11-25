@@ -175,18 +175,6 @@ jobs:
           AI_KAPAK_LIMIT: "0"
         run: node scripts/kapak-uret.mjs --uzak --limit=80 --paralel=8 --gun=14
 
-      # HAVUZ ONARIMI: kapagi kategori sahne havuzundan gelen ama haberle konu
-      # ortusmesi zayif olan eski kapaklari (or. Bluetooth haberi -> devre karti)
-      # ayni kategorideki DAHA YAKIN kareyle degistirir. Daha iyi kare yoksa
-      # habere dokunmaz: koru korune yeniden uretim dosya copu ve gerileme olur.
-      - name: Havuz kapaklarini onar
-        continue-on-error: true
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          AI_KAPAK_LIMIT: "0"
-        run: node scripts/kapak-uret.mjs --havuz --limit=120 --paralel=8 --gun=14
-
       # GUVENLIK AGI: kapak adimi bir haberi atlarsa `image` alani Wikimedia
       # stogunda kalabiliyor (baslikla ilgisiz kare). En yeni stok gorselli
       # haberler icin gercek foto (yoksa tasarim karti) uretilir.
@@ -199,14 +187,17 @@ jobs:
         run: node scripts/kapak-uret.mjs --stok --limit=25 --paralel=6 --gun=14
 
       # KAPAKSIZ ARSIV: `image` alani hala yayincinin CDN'ini gosteren eski
-      # kayitlar (yerel kapak dosyasi hic uretilmemis). Bunlar sayfada hotlink
-      # ya da gorselsiz cikiyordu. Tur, yerel havuzdan uygun kare bulursa onu
-      # kullanir, bulamazsa konuya uygun tasarim karti uretir.
+      # kayitlar (yerel kapak dosyasi hic uretilmemis). DOSYA `--kaynaktan` ile
+      # yayincinin kendi gorselinden uretilir (altina kaynak atif seridi
+      # basilir); o da kalite kapisindan gecemezse konuya uygun tasarim karti
+      # kalir. Yerel havuz bilincli olarak KULLANILMAZ: havuz kareleri haberle
+      # konu ortusmesini kanitlamadigi icin (Bluetooth haberi -> devre karti,
+      # Osimhen -> Camp Nou) 19.11.2026'da kaldirildi.
       - name: Kapaksiz haberleri yerellestir
         continue-on-error: true
         env:
           AI_KAPAK_LIMIT: "0"
-        run: node scripts/kapak-uret.mjs --kapaksiz --limit=30 --paralel=6 --gun=14
+        run: node scripts/kapak-uret.mjs --kaynaktan --limit=30 --paralel=6 --eski --gun=14
 
       # ALAKA DENETIMI: fotografli ama kare ile haber arasinda KANITLANABILIR
       # bag olmayan kapaklari (or. Iveco satin alma haberi -> Malta'daki zirhli
@@ -255,8 +246,8 @@ jobs:
           # Gunluk vision butcesi (bkz. src/gorsel-ajan.js): Gemini ucretsiz
           # katmani model+proje basina gunde 20 istek veriyor. Butce olmadan
           # ilk tur gunun tamamini yakiyor, sonraki 15 saat vision olmuyordu.
-          VISION_GUNLUK_LIMIT: "60"
-          VISION_ALAKA_GUNLUK_LIMIT: "24"
+          VISION_GUNLUK_LIMIT: "150"
+          VISION_ALAKA_GUNLUK_LIMIT: "36"
           # GROQ: asil kapasite. Olculen sinir istek degil TOKEN (8.000/dk
           # ~ 7 gorsel/dk), bu yuzden limit 45 ve cagrilar arasi 8 sn.
           VISION_GROQ_GUNLUK_LIMIT: "900"
