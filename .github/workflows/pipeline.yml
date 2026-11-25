@@ -378,10 +378,33 @@ jobs:
           # Uzak ilerlemisse cakismasiz birlestir; taze verimiz kazanir.
           # Kalan takipli degisiklikler merge'u bloke etmesin diye temizlenir
           # (commit edilmis olanlar korunur).
+          # CAKISMA COZUMU (25.11.2026): `-X ours` ikili dosyalarda
+          # "bizde silindi, uzakta degisti" (modify/delete) cakismasini
+          # COZEMEZ; kosu 45633076802'de yayin zinciri tam burada durdu ve
+          # `Zinciri surdur` adimi atlandigi icin hat tamamen kesildi.
+          # Kural: uzakta DOSYASI OLAN kazanir - yayindaki kapak varyantlari
+          # kaybolmasin. Uzakta da yoksa silinmis kalir.
+          coz() {
+            git diff --name-only --diff-filter=U | while IFS= read -r f; do
+              [ -n "$f" ] || continue
+              if git cat-file -e "origin/main:$f" 2>/dev/null; then
+                git checkout origin/main -- "$f" && git add -- "$f"
+              else
+                git rm -q -f --ignore-unmatch -- "$f" || true
+              fi
+            done
+          }
           git checkout -- . 2>/dev/null || true
           git fetch origin main
-          git merge --no-edit -X ours origin/main
-          for i in 1 2 3 4; do git fetch origin main && git merge --no-edit -X ours origin/main && git push && break; sleep 3; done
+          git merge --no-edit -X ours origin/main ||
+            { coz; git commit --no-edit -m "chore: veri birlestirme (cakisma cozuldu)" || true; }
+          for i in 1 2 3 4; do
+            git fetch origin main || continue
+            git merge --no-edit -X ours origin/main ||
+              { coz; git commit --no-edit -m "chore: veri birlestirme (cakisma cozuldu)" || true; }
+            git push && break
+            sleep 3
+          done
 
       - name: Site bagimliliklarini kur
         if: steps.commit.outputs.changed == 'true' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -600,9 +623,27 @@ jobs:
             exit 0
           fi
           git commit -m "chore: bildirim kaydi"
+          # Ayni cakisma korumasi (bkz. "Degisiklikleri kaydet" adimi).
+          coz() {
+            git diff --name-only --diff-filter=U | while IFS= read -r f; do
+              [ -n "$f" ] || continue
+              if git cat-file -e "origin/main:$f" 2>/dev/null; then
+                git checkout origin/main -- "$f" && git add -- "$f"
+              else
+                git rm -q -f --ignore-unmatch -- "$f" || true
+              fi
+            done
+          }
           git fetch origin main
-          git merge --no-edit -X ours origin/main
-          for i in 1 2 3 4; do git fetch origin main && git merge --no-edit -X ours origin/main && git push && break; sleep 3; done
+          git merge --no-edit -X ours origin/main ||
+            { coz; git commit --no-edit -m "chore: bildirim kaydi (cakisma cozuldu)" || true; }
+          for i in 1 2 3 4; do
+            git fetch origin main || continue
+            git merge --no-edit -X ours origin/main ||
+              { coz; git commit --no-edit -m "chore: bildirim kaydi (cakisma cozuldu)" || true; }
+            git push && break
+            sleep 3
+          done
 
       # NOT (18.10.2026): Netlify yayini KALDIRILDI.
       # Gerekce: tek yayin adresi https://haberinai.site (GitHub Pages) olsun.
